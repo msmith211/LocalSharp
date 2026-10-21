@@ -1,14 +1,14 @@
-// Registers EmberLlm with dependency injection, resolves IChatClient and chats through it.
+// Registers LocalSharp with dependency injection, resolves IChatClient and chats through it.
 // Usage: dotnet run --project samples/QuickStart [server URL]   (default: LM Studio on http://127.0.0.1:1234)
 
-using EmberLlm;
+using LocalSharp;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
 var baseUrl = args.Length > 0 ? args[0] : "http://127.0.0.1:1234";
 
 var services = new ServiceCollection();
-services.AddEmberLlm(options => options.BaseUrl = baseUrl);
+services.AddLocalSharp(options => options.BaseUrl = baseUrl);
 await using var provider = services.BuildServiceProvider();
 
 IChatClient chat = provider.GetRequiredService<IChatClient>();
@@ -26,12 +26,12 @@ try
         Console.Write(update.Text);
     Console.WriteLine();
 }
-catch (EmberLlmConnectionException)
+catch (LocalSharpConnectionException)
 {
     Console.Error.WriteLine($"No server is running at {baseUrl}. Start one with a model loaded, or pass its URL.");
     return 1;
 }
-catch (EmberLlmException ex)
+catch (LocalSharpException ex)
 {
     Console.Error.WriteLine(ex.Message);
     return 1;

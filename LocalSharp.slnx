@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LocalSharp/LocalSharp.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/QuickStart/QuickStart.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LocalSharp.IntegrationTests/LocalSharp.IntegrationTests.csproj" />
+    <Project Path="tests/LocalSharp.Tests/LocalSharp.Tests.csproj" />
+  </Folder>
+</Solution>

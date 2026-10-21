@@ -32,23 +32,23 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore EmberLlm.slnx
+        run: dotnet restore LocalSharp.slnx
 
       - name: Build
-        run: dotnet build EmberLlm.slnx -c Release --no-restore
+        run: dotnet build LocalSharp.slnx -c Release --no-restore
 
-      # Integration tests skip themselves unless EMBERLLM_TEST_URL is set, which CI never does
+      # Integration tests skip themselves unless LOCALSHARP_TEST_URL is set, which CI never does
       - name: Test
-        run: dotnet test --solution EmberLlm.slnx -c Release --no-build
+        run: dotnet test --solution LocalSharp.slnx -c Release --no-build
 
       # Catches packaging mistakes before a release tag does
       - name: Pack
         if: matrix.os == 'ubuntu-latest'
-        run: dotnet pack EmberLlm.slnx -c Release --no-build -o packages
+        run: dotnet pack LocalSharp.slnx -c Release --no-build -o packages
 
       - name: Coverage
         if: matrix.os == 'ubuntu-latest'
-        run: dotnet test --project tests/EmberLlm.Tests -c Release --no-build --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml
+        run: dotnet test --project tests/LocalSharp.Tests -c Release --no-build --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest'

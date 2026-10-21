@@ -18,10 +18,10 @@
     <Authors>Michael Smith</Authors>
     <Copyright>Copyright (c) 2026 Michael Smith</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/msmith211/EmberLlm</RepositoryUrl>
+    <RepositoryUrl>https://github.com/msmith211/LocalSharp</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageProjectUrl>https://github.com/msmith211/EmberLlm</PackageProjectUrl>
-    <PackageReleaseNotes>https://github.com/msmith211/EmberLlm/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/msmith211/LocalSharp</PackageProjectUrl>
+    <PackageReleaseNotes>https://github.com/msmith211/LocalSharp/blob/main/CHANGELOG.md</PackageReleaseNotes>
   </PropertyGroup>
 
   <!-- Packaging. The release workflow sets Version from the git tag; this is the fallback for local builds.
