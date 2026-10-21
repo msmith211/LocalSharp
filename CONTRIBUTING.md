@@ -1,6 +1,6 @@
-# Contributing to EmberLlm
+# Contributing to LocalSharp
 
-Thanks for your interest in EmberLlm. Bug reports, fixture recordings from real backends, and small focused pull requests are all welcome. This page covers what you need to build, test and send a change.
+Thanks for your interest in LocalSharp. Bug reports, fixture recordings from real backends, and small focused pull requests are all welcome. This page covers what you need to build, test and send a change.
 
 ## Scope
 
@@ -22,21 +22,21 @@ dotnet build
 dotnet test
 ```
 
-Unit tests (`tests/EmberLlm.Tests/`) need no server. They use a fake `HttpMessageHandler` that replays recorded responses, so they run anywhere. CI runs the build and unit tests on Linux and Windows for every push and pull request.
+Unit tests (`tests/LocalSharp.Tests/`) need no server. They use a fake `HttpMessageHandler` that replays recorded responses, so they run anywhere. CI runs the build and unit tests on Linux and Windows for every push and pull request.
 
 ### Integration tests (opt-in)
 
-Tests in `tests/EmberLlm.IntegrationTests/` hit a real local server. They are skipped unless the `EMBERLLM_TEST_URL` environment variable points at one. Load the smallest model you have so they run quickly.
+Tests in `tests/LocalSharp.IntegrationTests/` hit a real local server. They are skipped unless the `LOCALSHARP_TEST_URL` environment variable points at one. Load the smallest model you have so they run quickly.
 
 ```sh
 # bash
-EMBERLLM_TEST_URL=http://localhost:1234 dotnet test --project tests/EmberLlm.IntegrationTests
+LOCALSHARP_TEST_URL=http://localhost:1234 dotnet test --project tests/LocalSharp.IntegrationTests
 ```
 
 ```powershell
 # PowerShell
-$env:EMBERLLM_TEST_URL = "http://localhost:1234"
-dotnet test --project tests/EmberLlm.IntegrationTests
+$env:LOCALSHARP_TEST_URL = "http://localhost:1234"
+dotnet test --project tests/LocalSharp.IntegrationTests
 ```
 
 Integration tests don't run in CI, so mention in your pull request which backend you ran them against, if any.
@@ -47,7 +47,7 @@ Backend quirks are tested from real responses stored under `tests/fixtures/<back
 
 1. Capture the actual response from the backend (for example with `curl` against its `/v1` endpoint). Don't hand-write or "tidy" it; the quirk is the point.
 2. Save it under `tests/fixtures/<backend>/`.
-3. Add a unit test in `tests/EmberLlm.Tests/` that replays the fixture through the fake HTTP handler and asserts the behavior you expect.
+3. Add a unit test in `tests/LocalSharp.Tests/` that replays the fixture through the fake HTTP handler and asserts the behavior you expect.
 4. Note the backend name and version in the pull request.
 
 If you're not sure what the backend is supposed to do, write the fixture test, mark it skipped with the reason, and raise the question in the pull request or an issue. Please don't commit failing tests.
@@ -96,7 +96,7 @@ Releases are published by [.github/workflows/release.yml](.github/workflows/rele
 
 3. The workflow checks that the tag is on `main` and that `CHANGELOG.md` has a section for the version, then builds, tests and packs with the tag's version. It pushes the package and symbols to NuGet and creates a GitHub release with that changelog section as its notes. A version with a suffix (`-beta.1`) is marked as a pre-release on both.
 
-One-time setup: on nuget.org, add a trusted publishing policy for repository `msmith211/EmberLlm` and workflow `release.yml`. In the GitHub repo, add a `release` environment and a `NUGET_USER` secret holding the nuget.org user name. NuGet never shows a version again once it's deleted, so a mistaken release is fixed by unlisting it and publishing the next version.
+One-time setup: on nuget.org, add a trusted publishing policy for repository `msmith211/LocalSharp` and workflow `release.yml`. In the GitHub repo, add a `release` environment and a `NUGET_USER` secret holding the nuget.org user name. NuGet never shows a version again once it's deleted, so a mistaken release is fixed by unlisting it and publishing the next version.
 
 ## Reporting bugs
 

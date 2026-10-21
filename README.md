@@ -1,13 +1,13 @@
-# EmberLlm
+# LocalSharp
 
 **A .NET client for local LLM servers (LM Studio, Ollama, llama.cpp, vLLM), built on Microsoft.Extensions.AI.**
 
-[![CI](https://github.com/msmith211/EmberLlm/actions/workflows/ci.yml/badge.svg)](https://github.com/msmith211/EmberLlm/actions/workflows/ci.yml)
-[![NuGet](https://img.shields.io/nuget/vpre/EmberLlm.svg)](https://www.nuget.org/packages/EmberLlm)
+[![CI](https://github.com/msmith211/LocalSharp/actions/workflows/ci.yml/badge.svg)](https://github.com/msmith211/LocalSharp/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/vpre/LocalSharp.svg)](https://www.nuget.org/packages/LocalSharp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > [!NOTE]
-> **Status: v0.1.0.** Chat, streaming, model listing, server discovery, typed structured output and dependency injection all work, with unit tests in CI and integration tests against a real LM Studio server. Until 1.0, minor versions (0.2, 0.3) may include breaking changes.
+> **Status: v0.1.** Formerly **EmberLlm**, renamed to avoid a clash with an existing model of that name ([decision 0014](docs/decisions/0014-rename-to-localsharp.md)); v0.1.0 shipped as the `EmberLlm` package. Chat, streaming, model listing, server discovery, typed structured output and dependency injection all work, with unit tests in CI and integration tests against a real LM Studio server. Until 1.0, minor versions (0.2, 0.3) may include breaking changes.
 
 ## Contents
 
@@ -21,32 +21,32 @@
 
 ## Why this exists
 
-You can already reach a local server from .NET without EmberLlm: point the official OpenAI SDK at `http://127.0.0.1:1234/v1` and wrap it with Microsoft's `AsIChatClient()` adapter. For basic chat that works well. EmberLlm exists for what that setup gets wrong or can't do with local servers. These differences were measured side by side against LM Studio ([spike 0001](docs/spikes/0001-comparison-with-openai-sdk.md)):
+You can already reach a local server from .NET without LocalSharp: point the official OpenAI SDK at `http://127.0.0.1:1234/v1` and wrap it with Microsoft's `AsIChatClient()` adapter. For basic chat that works well. LocalSharp exists for what that setup gets wrong or can't do with local servers. These differences were measured side by side against LM Studio ([spike 0001](docs/spikes/0001-comparison-with-openai-sdk.md)):
 
-| | EmberLlm | OpenAI SDK + adapter |
+| | LocalSharp | OpenAI SDK + adapter |
 | --- | --- | --- |
-| Find running servers and identify the backend | `EmberLlmDiscovery.FindAsync()` | Not available |
+| Find running servers and identify the backend | `LocalSharpDiscovery.FindAsync()` | Not available |
 | `ChatOptions.TopK`, extra fields in `AdditionalProperties` | Sent to the server | **Silently dropped** |
 | Options chat completions can't honor (e.g. `ConversationId`) | `NotSupportedException` before anything is sent | **Silently ignored** |
 | A slow local model writing for over 100 seconds | Waits (10-minute default timeout) | Cut off at 100 s and **re-sent**, up to 3 times |
-| Server not running | `EmberLlmConnectionException` in ~2 s | `AggregateException` after 4 retries, ~8 s |
+| Server not running | `LocalSharpConnectionException` in ~2 s | `AggregateException` after 4 retries, ~8 s |
 | No model name given | Uses the first model the server lists | Can't create the client |
 | Server answers with a different model than requested | Visible in `ModelId`; `StrictModelMatching` makes it throw | Not detectable |
 
-The principle behind most of these rows: **EmberLlm never fails silently.** Every option you set is either sent or rejected before the request goes out, and every response field is either mapped or kept in `AdditionalProperties` ([SPEC.md, Design rules](SPEC.md#design-rules)).
+The principle behind most of these rows: **LocalSharp never fails silently.** Every option you set is either sent or rejected before the request goes out, and every response field is either mapped or kept in `AdditionalProperties` ([SPEC.md, Design rules](SPEC.md#design-rules)).
 
-Both setups keep reasoning from thinking models separate from the answer, and both report token usage when streaming. Microsoft.Extensions.AI's `GetResponseAsync<T>` works through EmberLlm too, because `EmberLlmClient` *is* an `IChatClient`. With JSON schema mode it parsed about 9 replies in 10 from a small model, with no retry for the rest and no working mode for servers that can't enforce a schema. EmberLlm's `GetAsync<T>` builds on it and adds both, plus cleanup of `<think>` blocks and code fences.
+Both setups keep reasoning from thinking models separate from the answer, and both report token usage when streaming. Microsoft.Extensions.AI's `GetResponseAsync<T>` works through LocalSharp too, because `LocalSharpClient` *is* an `IChatClient`. With JSON schema mode it parsed about 9 replies in 10 from a small model, with no retry for the rest and no working mode for servers that can't enforce a schema. LocalSharp's `GetAsync<T>` builds on it and adds both, plus cleanup of `<think>` blocks and code fences.
 
-EmberLlm complements those libraries rather than replacing them, and drops into the Microsoft.Extensions.AI ecosystem without conversion code.
+LocalSharp complements those libraries rather than replacing them, and drops into the Microsoft.Extensions.AI ecosystem without conversion code.
 
 ## Quick start
 
 ### Install
 
-EmberLlm targets .NET 10 ([SDK download](https://dotnet.microsoft.com/download/dotnet/10.0)):
+LocalSharp targets .NET 10 ([SDK download](https://dotnet.microsoft.com/download/dotnet/10.0)):
 
 ```bash
-dotnet add package EmberLlm
+dotnet add package LocalSharp
 ```
 
 ### Chat and stream
@@ -54,9 +54,9 @@ dotnet add package EmberLlm
 Start a local server with a model loaded (LM Studio listens on port 1234 by default), then:
 
 ```csharp
-using EmberLlm;
+using LocalSharp;
 
-using var llm = new EmberLlmClient("http://127.0.0.1:1234");
+using var llm = new LocalSharpClient("http://127.0.0.1:1234");
 
 // One reply, no model name needed
 string answer = await llm.CompleteAsync("Explain Span<T> in two sentences.");
@@ -68,7 +68,7 @@ await foreach (string token in llm.StreamAsync("Write a haiku about garbage coll
 ```
 
 > [!TIP]
-> `localhost` works too: EmberLlm connects to IPv4 and IPv6 at the same time, including through `AddEmberLlm`. If you pass in your own `HttpClient`, prefer `127.0.0.1`: by default .NET tries IPv6 (`::1`) first, and many local servers, LM Studio included, listen only on IPv4, so on Windows the first request waits about 2 seconds ([decision 0010](docs/decisions/0010-parallel-connect-for-owned-http-clients.md)).
+> `localhost` works too: LocalSharp connects to IPv4 and IPv6 at the same time, including through `AddLocalSharp`. If you pass in your own `HttpClient`, prefer `127.0.0.1`: by default .NET tries IPv6 (`::1`) first, and many local servers, LM Studio included, listen only on IPv4, so on Windows the first request waits about 2 seconds ([decision 0010](docs/decisions/0010-parallel-connect-for-owned-http-clients.md)).
 
 ### Get typed results
 
@@ -79,20 +79,20 @@ Console.WriteLine($"{review.Severity}: {review.Summary}");
 public record CodeReview(string Summary, string[] Issues, int Severity);
 ```
 
-The type's JSON schema is sent as `response_format: json_schema`. Set `EmberLlmOptions.StructuredOutputMode = StructuredOutputMode.Prompt` for servers that can't enforce a schema; a client created from a discovered server picks the mode itself. Deserialization is strict (missing or null required members fail), a reply that isn't valid JSON is cleaned first, and a reply that still can't be read goes back to the model with the error, up to `MaxStructuredRetries` times (default 2). If every attempt fails, `StructuredOutputException.Attempts` holds each reply and error ([decision 0013](docs/decisions/0013-structured-output-modes-cleanup-and-retries.md)).
+The type's JSON schema is sent as `response_format: json_schema`. Set `LocalSharpOptions.StructuredOutputMode = StructuredOutputMode.Prompt` for servers that can't enforce a schema; a client created from a discovered server picks the mode itself. Deserialization is strict (missing or null required members fail), a reply that isn't valid JSON is cleaned first, and a reply that still can't be read goes back to the model with the error, up to `MaxStructuredRetries` times (default 2). If every attempt fails, `StructuredOutputException.Attempts` holds each reply and error ([decision 0013](docs/decisions/0013-structured-output-modes-cleanup-and-retries.md)).
 
 ### Find a running server
 
 ```csharp
-using EmberLlm;
+using LocalSharp;
 
-DiscoveryResult servers = await EmberLlmDiscovery.FindAsync();
+DiscoveryResult servers = await LocalSharpDiscovery.FindAsync();
 foreach (DiscoveredServer server in servers)
     Console.WriteLine(server); // LmStudio at http://127.0.0.1:1234/ (2 models)
 
 if (servers.Count > 0)
 {
-    using var llm = new EmberLlmClient(servers[0]);
+    using var llm = new LocalSharpClient(servers[0]);
     Console.WriteLine(await llm.CompleteAsync("Say hello."));
 }
 ```
@@ -102,10 +102,10 @@ Add endpoints such as another machine on your network through `DiscoveryOptions.
 ### Use it as an `IChatClient`
 
 ```csharp
-using EmberLlm;
+using LocalSharp;
 using Microsoft.Extensions.AI;
 
-using var llm = new EmberLlmClient(new EmberLlmOptions
+using var llm = new LocalSharpClient(new LocalSharpOptions
 {
     BaseUrl = "http://127.0.0.1:1234",
     DefaultModel = "qwen/qwen3-4b-thinking-2507", // optional
@@ -126,17 +126,17 @@ Console.WriteLine($"Answered by {reply.ModelId} using {reply.Usage?.OutputTokenC
 ### Register with dependency injection
 
 ```csharp
-using EmberLlm;
+using LocalSharp;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
-services.AddEmberLlm(o => o.BaseUrl = "http://127.0.0.1:1234");
+services.AddLocalSharp(o => o.BaseUrl = "http://127.0.0.1:1234");
 
-// Later, anywhere IChatClient or EmberLlmClient is injected
+// Later, anywhere IChatClient or LocalSharpClient is injected
 IChatClient chat = provider.GetRequiredService<IChatClient>();
 ```
 
-`AddEmberLlm` registers one `EmberLlmClient`, also resolvable as `IChatClient`, that gets its `HttpClient` from `IHttpClientFactory`. It returns the `IHttpClientBuilder`, so you can add your own handlers ([decision 0012](docs/decisions/0012-register-a-singleton-client-with-addemberllm.md)). [samples/QuickStart](samples/QuickStart/Program.cs) is a complete console app.
+`AddLocalSharp` registers one `LocalSharpClient`, also resolvable as `IChatClient`, that gets its `HttpClient` from `IHttpClientFactory`. It returns the `IHttpClientBuilder`, so you can add your own handlers ([decision 0012](docs/decisions/0012-register-a-singleton-client-with-addemberllm.md)). [samples/QuickStart](samples/QuickStart/Program.cs) is a complete console app.
 
 ### List models and handle errors
 
@@ -146,11 +146,11 @@ try
     foreach (ModelInfo model in await llm.ListModelsAsync())
         Console.WriteLine(model.Id);
 }
-catch (EmberLlmConnectionException)
+catch (LocalSharpConnectionException)
 {
     Console.WriteLine("No server is running at that address.");
 }
-catch (EmberLlmHttpException ex)
+catch (LocalSharpHttpException ex)
 {
     Console.WriteLine($"Server returned {(int)ex.StatusCode}: {ex.ServerMessage}");
 }
@@ -163,14 +163,14 @@ catch (EmberLlmHttpException ex)
 | Chat | `GetResponseAsync` returns a `ChatResponse` with text, reasoning, finish reason and token usage. `CompleteAsync(string)` is the one-line version. |
 | Streaming | `GetStreamingResponseAsync` yields `ChatResponseUpdate`s, with usage in the final update. `StreamAsync(string)` yields just the reply text. |
 | Options | `ChatOptions` model, temperature, max output tokens, top-p, top-k, stop sequences, seed, frequency and presence penalties, instructions, reasoning effort and response format (text, JSON, JSON schema). `AdditionalProperties` pass through as extra request fields. |
-| Unsupported options | Options EmberLlm can't honor, such as tools (planned for v0.2), throw `NotSupportedException` before any request is made. |
+| Unsupported options | Options LocalSharp can't honor, such as tools (planned for v0.2), throw `NotSupportedException` before any request is made. |
 | Structured output | `GetAsync<T>()` returns a typed result over Microsoft.Extensions.AI's `GetResponseAsync<T>`, with JSON schema or prompt mode, cleanup of invalid replies, strict deserialization and corrective retries ([decision 0013](docs/decisions/0013-structured-output-modes-cleanup-and-retries.md)). |
-| Model selection | `ChatOptions.ModelId`, then `EmberLlmOptions.DefaultModel`, then the server's first listed model ([decision 0002](docs/decisions/0002-model-selection-order.md)). |
+| Model selection | `ChatOptions.ModelId`, then `LocalSharpOptions.DefaultModel`, then the server's first listed model ([decision 0002](docs/decisions/0002-model-selection-order.md)). |
 | Model listing | `ListModelsAsync()` returns a `ModelList` of `ModelInfo` (id, owner, creation time, plus server-specific fields). |
-| Discovery | `EmberLlmDiscovery.FindAsync()` probes default ports (and any endpoints you add) in parallel, confirms each server with `/v1/models`, identifies the backend from response content, and reports unusable endpoints in `Skipped` ([decision 0009](docs/decisions/0009-discovery-design.md)). |
-| Errors | `EmberLlmHttpException` (status code and the server's message), `EmberLlmConnectionException`, `EmberLlmTimeoutException`, `NoModelAvailableException`, `ModelMismatchException` and `StructuredOutputException`, all deriving from `EmberLlmException` ([decision 0003](docs/decisions/0003-exception-model.md)). |
-| Strict model matching | Opt-in `EmberLlmOptions.StrictModelMatching` throws when a server answers with a different model than requested ([decision 0008](docs/decisions/0008-model-substitution-and-strict-matching.md)). |
-| Dependency injection | `services.AddEmberLlm(...)` registers a singleton `EmberLlmClient` and `IChatClient` through `IHttpClientFactory`, with no `HttpClient` timeout of its own and fast `localhost` connections ([decision 0012](docs/decisions/0012-register-a-singleton-client-with-addemberllm.md)). |
+| Discovery | `LocalSharpDiscovery.FindAsync()` probes default ports (and any endpoints you add) in parallel, confirms each server with `/v1/models`, identifies the backend from response content, and reports unusable endpoints in `Skipped` ([decision 0009](docs/decisions/0009-discovery-design.md)). |
+| Errors | `LocalSharpHttpException` (status code and the server's message), `LocalSharpConnectionException`, `LocalSharpTimeoutException`, `NoModelAvailableException`, `ModelMismatchException` and `StructuredOutputException`, all deriving from `LocalSharpException` ([decision 0003](docs/decisions/0003-exception-model.md)). |
+| Strict model matching | Opt-in `LocalSharpOptions.StrictModelMatching` throws when a server answers with a different model than requested ([decision 0008](docs/decisions/0008-model-substitution-and-strict-matching.md)). |
+| Dependency injection | `services.AddLocalSharp(...)` registers a singleton `LocalSharpClient` and `IChatClient` through `IHttpClientFactory`, with no `HttpClient` timeout of its own and fast `localhost` connections ([decision 0012](docs/decisions/0012-register-a-singleton-client-with-addemberllm.md)). |
 | Interop | `GetService` returns `ChatClientMetadata`, so Microsoft.Extensions.AI middleware and libraries built on `IChatClient` work unchanged. |
 
 Unit tests run on Linux and Windows in CI. Integration tests are opt-in and have passed against LM Studio with gemma-4-12b and qwen3-4b-thinking. See [CHANGELOG.md](CHANGELOG.md) for the full list.
@@ -181,7 +181,7 @@ Tool calling and loading or unloading models are planned for v0.2. See [ROADMAP.
 
 ## Supported backends
 
-EmberLlm talks to any server with an OpenAI-compatible `/v1/chat/completions` endpoint. Only LM Studio has been tested against a real server so far.
+LocalSharp talks to any server with an OpenAI-compatible `/v1/chat/completions` endpoint. Only LM Studio has been tested against a real server so far.
 
 | Backend | Default URL | Tested | Notes |
 | --- | --- | --- | --- |
@@ -197,7 +197,7 @@ Bug reports and recorded responses from untested backends are especially welcome
 
 ## Design decisions
 
-Significant choices are recorded as short notes in [docs/decisions](docs/decisions/), for example why EmberLlm reuses Microsoft.Extensions.AI types, why `EmberLlmClient` implements `IChatClient` directly, and how it picks a model when you don't name one.
+Significant choices are recorded as short notes in [docs/decisions](docs/decisions/), for example why LocalSharp reuses Microsoft.Extensions.AI types, why `LocalSharpClient` implements `IChatClient` directly, and how it picks a model when you don't name one.
 
 ## Contributing
 

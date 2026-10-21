@@ -1,16 +1,16 @@
-# EmberLlm .NET Client: Project Spec
+# LocalSharp .NET Client: Project Spec
 
 Oct 8, 2026 · @Michael Smith (revised Oct 12, 2026)
 
 ## Overview
 
-EmberLlm is an open-source .NET library (NuGet package) that makes local LLM servers feel native in C#. It targets developers who run models on their own hardware through LM Studio, Ollama, llama.cpp server or vLLM, and want to call them from ASP.NET, Blazor, console apps, games or bots.
+LocalSharp (named EmberLlm until 2026-10-20, see [0014](docs/decisions/0014-rename-to-localsharp.md)) is an open-source .NET library (NuGet package) that makes local LLM servers feel native in C#. It targets developers who run models on their own hardware through LM Studio, Ollama, llama.cpp server or vLLM, and want to call them from ASP.NET, Blazor, console apps, games or bots.
 
 The official OpenAI SDK and Microsoft.Extensions.AI handle generic chat well, and OllamaSharp covers one backend. None of them focus on what is specific to local inference: finding running servers, managing which model is loaded, and getting reliable structured output from smaller models. That gap is this library's reason to exist.
 
-The library complements existing tools rather than replacing them. `EmberLlmClient` is itself a Microsoft.Extensions.AI `IChatClient` and uses that package's types throughout, so it drops into that ecosystem without adapters or conversion code.
+The library complements existing tools rather than replacing them. `LocalSharpClient` is itself a Microsoft.Extensions.AI `IChatClient` and uses that package's types throughout, so it drops into that ecosystem without adapters or conversion code.
 
-Name: EmberLlm (package ID, root namespace and repo). Chosen in milestone 1 after confirming it was free on NuGet and GitHub.
+Name: LocalSharp (package ID, root namespace and repo). Chosen in milestone 1 after confirming it was free on NuGet and GitHub.
 
 ## v0.1 scope
 
@@ -19,8 +19,8 @@ v0.1 ships five capabilities and nothing else. Keep it small enough to publish i
 1. **Chat completion** against any OpenAI-compatible `/v1/chat/completions` endpoint, through `IChatClient`'s `GetResponseAsync` and `GetStreamingResponseAsync` (rich updates with usage and finish reason), plus the simple `CompleteAsync(string)` and `StreamAsync(string)`.
 2. **Model listing** through `/v1/models`, returning typed model info.
 3. **Server discovery** that probes common local ports and identifies which backend is running.
-4. **Typed structured output** via `GetAsync<T>()`: built on Microsoft.Extensions.AI's `GetResponseAsync<T>`, which generates the JSON schema and parses the reply. EmberLlm adds cleanup, corrective retries, and a prompt mode for servers that can't enforce a schema ([0011](docs/decisions/0011-structured-output-builds-on-meai.md), [0013](docs/decisions/0013-structured-output-modes-cleanup-and-retries.md)).
-5. **Microsoft.Extensions.AI integration:** `EmberLlmClient` implements `IChatClient`, so it works anywhere Microsoft.Extensions.AI is used, including its middleware.
+4. **Typed structured output** via `GetAsync<T>()`: built on Microsoft.Extensions.AI's `GetResponseAsync<T>`, which generates the JSON schema and parses the reply. LocalSharp adds cleanup, corrective retries, and a prompt mode for servers that can't enforce a schema ([0011](docs/decisions/0011-structured-output-builds-on-meai.md), [0013](docs/decisions/0013-structured-output-modes-cleanup-and-retries.md)).
+5. **Microsoft.Extensions.AI integration:** `LocalSharpClient` implements `IChatClient`, so it works anywhere Microsoft.Extensions.AI is used, including its middleware.
 
 ### Non-goals for v0.1
 
@@ -40,7 +40,7 @@ Runtime dependencies (the complete list; ask before adding anything else):
 - `System.Text.Json` (in-box)
 - `Microsoft.Extensions.AI` (milestone 6, approved 2026-10-16: provides `GetResponseAsync<T>`, which `GetAsync<T>` builds on; see [0011](docs/decisions/0011-structured-output-builds-on-meai.md))
 - `Microsoft.Extensions.AI.Abstractions`
-- `Microsoft.Extensions.DependencyInjection.Abstractions` (for `AddEmberLlm()`)
+- `Microsoft.Extensions.DependencyInjection.Abstractions` (for `AddLocalSharp()`)
 - `Microsoft.Extensions.Http` (for `IHttpClientFactory` registration)
 
 Test-only packages may be added without asking: xUnit v3 (its `Assert.Skip` handles opt-in integration tests), test SDK and runner packages, and coverage tools. They must never be referenced from `src/`.
@@ -48,20 +48,20 @@ Test-only packages may be added without asking: xUnit v3 (its `Assert.Skip` hand
 Other constraints:
 
 - Async everywhere, every public async method takes a `CancellationToken`
-- Accept an injected `HttpClient`; ship an `AddEmberLlm()` extension for `IServiceCollection` that registers a singleton `EmberLlmClient` whose `HttpClient` comes from `IHttpClientFactory` ([0012](docs/decisions/0012-register-a-singleton-client-with-addemberllm.md))
-- `HttpClient` ownership: a client the caller passes in is never disposed by the library. When the library creates its own (URL-only constructor, discovery without an injected client), it owns and disposes it, and `EmberLlmClient` implements `IDisposable`
+- Accept an injected `HttpClient`; ship an `AddLocalSharp()` extension for `IServiceCollection` that registers a singleton `LocalSharpClient` whose `HttpClient` comes from `IHttpClientFactory` ([0012](docs/decisions/0012-register-a-singleton-client-with-addemberllm.md))
+- `HttpClient` ownership: a client the caller passes in is never disposed by the library. When the library creates its own (URL-only constructor, discovery without an injected client), it owns and disposes it, and `LocalSharpClient` implements `IDisposable`
 - Connections: library-created `HttpClient`s connect to all of a host's addresses at once and keep the first that succeeds, so `localhost` is as fast as `127.0.0.1` ([0010](docs/decisions/0010-parallel-connect-for-owned-http-clients.md)). Injected `HttpClient`s are not changed
-- Timeouts: library-created `HttpClient`s use `Timeout = Infinite`. Requests are bounded by `EmberLlmOptions.RequestTimeout` (default 10 minutes, since local generation can be slow) applied through a linked `CancellationTokenSource`. A timeout throws `EmberLlmTimeoutException`, distinct from caller cancellation (`OperationCanceledException`)
+- Timeouts: library-created `HttpClient`s use `Timeout = Infinite`. Requests are bounded by `LocalSharpOptions.RequestTimeout` (default 10 minutes, since local generation can be slow) applied through a linked `CancellationTokenSource`. A timeout throws `LocalSharpTimeoutException`, distinct from caller cancellation (`OperationCanceledException`)
 - No static state, no singletons hidden inside the library
 - XML doc comments on every public member
 - MIT license
 
 ```
-EmberLlm/
+LocalSharp/
 ├── src/
-│   └── EmberLlm/
-│       ├── EmberLlmClient.cs        # main entry point
-│       ├── EmberLlmOptions.cs
+│   └── LocalSharp/
+│       ├── LocalSharpClient.cs        # main entry point
+│       ├── LocalSharpOptions.cs
 │       ├── Chat/                    # wire types, ChatOptions mapping, SSE reader
 │       ├── Models/                  # /v1/models types
 │       ├── Discovery/               # port probing, backend fingerprinting
@@ -69,8 +69,8 @@ EmberLlm/
 │       ├── Extensions/              # DI registration
 │       └── Backends/                # per-backend quirks and capabilities (LM Studio, Ollama, llama.cpp, vLLM)
 ├── tests/
-│   ├── EmberLlm.Tests/              # unit tests, fake HTTP handler
-│   ├── EmberLlm.IntegrationTests/   # opt-in, hits a real local server
+│   ├── LocalSharp.Tests/              # unit tests, fake HTTP handler
+│   ├── LocalSharp.IntegrationTests/   # opt-in, hits a real local server
 │   └── fixtures/<backend>/          # recorded responses
 ├── samples/
 │   └── QuickStart/                  # console app from the README
@@ -81,12 +81,12 @@ EmberLlm/
 ├── global.json                  # SDK version, Microsoft.Testing.Platform test runner
 ├── Directory.Build.props        # shared build settings
 ├── Directory.Packages.props     # central package versions
-└── EmberLlm.slnx
+└── LocalSharp.slnx
 ```
 
 ## Type naming
 
-Reuse Microsoft.Extensions.AI types wherever the concept already exists ([0001](docs/decisions/0001-reuse-microsoft-extensions-ai-types.md), [0005](docs/decisions/0005-emberllmclient-implements-ichatclient.md)). EmberLlm defines its own types only for concepts that package doesn't have.
+Reuse Microsoft.Extensions.AI types wherever the concept already exists ([0001](docs/decisions/0001-reuse-microsoft-extensions-ai-types.md), [0005](docs/decisions/0005-emberllmclient-implements-ichatclient.md)). LocalSharp defines its own types only for concepts that package doesn't have.
 
 | Concept | Type |
 | --- | --- |
@@ -95,8 +95,8 @@ Reuse Microsoft.Extensions.AI types wherever the concept already exists ([0001](
 | Full response (text, usage, finish reason) | `Microsoft.Extensions.AI.ChatResponse`, `UsageDetails` |
 | Streaming update | `Microsoft.Extensions.AI.ChatResponseUpdate` |
 | Client metadata | `Microsoft.Extensions.AI.ChatClientMetadata`, returned by `GetService` |
-| Model info | `EmberLlm.ModelInfo`, in a `ModelList` (an `IReadOnlyList<ModelInfo>` that also keeps top-level fields) |
-| Discovery result | `EmberLlm.DiscoveredServer`, `BackendType` |
+| Model info | `LocalSharp.ModelInfo`, in a `ModelList` (an `IReadOnlyList<ModelInfo>` that also keeps top-level fields) |
+| Discovery result | `LocalSharp.DiscoveredServer`, `BackendType` |
 
 Backend-specific extras (for example llama.cpp `timings`) go into `AdditionalProperties` on the response or update rather than new types.
 
@@ -107,9 +107,9 @@ These two rules apply to every feature. Code that breaks one is a bug, fixed wit
 ### Never fail silently
 
 1. **Requests:** every value a caller sets that a server could act on is either sent, or rejected with an exception before that request goes out.
-2. **Responses:** every field in a server's JSON response is either mapped to a typed property or kept in `AdditionalProperties`. If EmberLlm can't represent a response faithfully (for example, several choices), it throws.
-3. **Exceptions are listed explicitly** in code, tests and docs. Currently: message metadata (`MessageId`, `CreatedAt`, `RawRepresentation`), reasoning from earlier turns (servers expect it not to be replayed), and the SSE `id:` and `retry:` fields (reconnection hints; EmberLlm doesn't reconnect). Anything not listed falls under 1 or 2.
-4. **Guard tests** classify every settable property of the Microsoft.Extensions.AI types EmberLlm sends (`ChatMessage`, `ChatOptions`). A new property added by a package upgrade fails the build until it is handled.
+2. **Responses:** every field in a server's JSON response is either mapped to a typed property or kept in `AdditionalProperties`. If LocalSharp can't represent a response faithfully (for example, several choices), it throws.
+3. **Exceptions are listed explicitly** in code, tests and docs. Currently: message metadata (`MessageId`, `CreatedAt`, `RawRepresentation`), reasoning from earlier turns (servers expect it not to be replayed), and the SSE `id:` and `retry:` fields (reconnection hints; LocalSharp doesn't reconnect). Anything not listed falls under 1 or 2.
+4. **Guard tests** classify every settable property of the Microsoft.Extensions.AI types LocalSharp sends (`ChatMessage`, `ChatOptions`). A new property added by a package upgrade fails the build until it is handled.
 
 ### Support everything OpenAI-compatible
 
@@ -129,24 +129,24 @@ Every `ChatOptions` setting with an OpenAI-compatible equivalent is mapped:
 | `TopK` | `top_k` ([0007](docs/decisions/0007-map-topk-reasoning-and-response-format.md)) |
 | `Reasoning.Effort` | `reasoning_effort`: `none`, `low`, `medium`, `high`; `ExtraHigh` throws (0007) |
 | `ResponseFormat` | `response_format`: `text`, `json_object`, or `json_schema` (0007) |
-| `AdditionalProperties` | Passed through as extra top-level request fields. A key EmberLlm already sets for the request throws `ArgumentException`. |
+| `AdditionalProperties` | Passed through as extra top-level request fields. A key LocalSharp already sets for the request throws `ArgumentException`. |
 
-Anything else throws `NotSupportedException`, with a message naming the option and whether support is planned: `Tools`, `ToolMode` (required modes) and `AllowMultipleToolCalls` (v0.2), `ConversationId`, `AllowBackgroundResponses`, `ContinuationToken`, `RawRepresentationFactory` and `Reasoning.Output`. Settings that ask for nothing EmberLlm can't do are accepted: an empty tool list, tool mode `Auto` or `None`, and `false` for the boolean switches.
+Anything else throws `NotSupportedException`, with a message naming the option and whether support is planned: `Tools`, `ToolMode` (required modes) and `AllowMultipleToolCalls` (v0.2), `ConversationId`, `AllowBackgroundResponses`, `ContinuationToken`, `RawRepresentationFactory` and `Reasoning.Output`. Settings that ask for nothing LocalSharp can't do are accepted: an empty tool list, tool mode `Auto` or `None`, and `false` for the boolean switches.
 
 ## Public API sketch
 
 This is the target developer experience. Names can change during implementation, but the README quick start should look this simple.
 
 ```csharp
-using EmberLlm;
+using LocalSharp;
 using Microsoft.Extensions.AI;
 
 // Explicit endpoint
-var llm = new EmberLlmClient("http://localhost:1234");
+var llm = new LocalSharpClient("http://localhost:1234");
 
 // Or find whatever is running
-IReadOnlyList<DiscoveredServer> servers = await EmberLlmDiscovery.FindAsync();
-var discovered = new EmberLlmClient(servers[0]);
+IReadOnlyList<DiscoveredServer> servers = await LocalSharpDiscovery.FindAsync();
+var discovered = new LocalSharpClient(servers[0]);
 
 // List models
 IReadOnlyList<ModelInfo> models = await llm.ListModelsAsync();
@@ -176,19 +176,19 @@ CodeReview review = await llm.GetAsync<CodeReview>("Review this method: ...");
 IChatClient chat = llm;
 
 // DI
-services.AddEmberLlm(o => o.BaseUrl = "http://localhost:1234");
+services.AddLocalSharp(o => o.BaseUrl = "http://localhost:1234");
 ```
 
-Constructors: `EmberLlmClient(string baseUrl)`, `EmberLlmClient(EmberLlmOptions options)`, `EmberLlmClient(DiscoveredServer server)`, and `EmberLlmClient(HttpClient httpClient, EmberLlmOptions options)`. The options-only overload lets callers set `DefaultModel` or `RequestTimeout` without supplying an `HttpClient`.
+Constructors: `LocalSharpClient(string baseUrl)`, `LocalSharpClient(LocalSharpOptions options)`, `LocalSharpClient(DiscoveredServer server)`, and `LocalSharpClient(HttpClient httpClient, LocalSharpOptions options)`. The options-only overload lets callers set `DefaultModel` or `RequestTimeout` without supplying an `HttpClient`.
 
-Exceptions (see `docs/decisions/0003-exception-model.md`): all derive from `EmberLlmException`. `EmberLlmHttpException` (non-success status, with `StatusCode`, `ServerMessage`, `ResponseBody`), `EmberLlmConnectionException` (server unreachable), `EmberLlmTimeoutException`, `NoModelAvailableException`, `ModelMismatchException` (only with `EmberLlmOptions.StrictModelMatching`, see [0008](docs/decisions/0008-model-substitution-and-strict-matching.md)), and `StructuredOutputException` (milestone 6). Caller cancellation throws `OperationCanceledException` with the caller's token. Options, message content or message fields that EmberLlm can't send throw the standard `NotSupportedException` or `ArgumentException` before any chat request goes out (see Design rules). `EmberLlmDiscovery.FindAsync` has an overload that accepts an `HttpClient`.
+Exceptions (see `docs/decisions/0003-exception-model.md`): all derive from `LocalSharpException`. `LocalSharpHttpException` (non-success status, with `StatusCode`, `ServerMessage`, `ResponseBody`), `LocalSharpConnectionException` (server unreachable), `LocalSharpTimeoutException`, `NoModelAvailableException`, `ModelMismatchException` (only with `LocalSharpOptions.StrictModelMatching`, see [0008](docs/decisions/0008-model-substitution-and-strict-matching.md)), and `StructuredOutputException` (milestone 6). Caller cancellation throws `OperationCanceledException` with the caller's token. Options, message content or message fields that LocalSharp can't send throw the standard `NotSupportedException` or `ArgumentException` before any chat request goes out (see Design rules). `LocalSharpDiscovery.FindAsync` has an overload that accepts an `HttpClient`.
 
 ### Model selection
 
 When a call does not name a model, resolve it in this order:
 
 1. `ChatOptions.ModelId`, if set
-2. `EmberLlmOptions.DefaultModel`, if set
+2. `LocalSharpOptions.DefaultModel`, if set
 3. The first model returned by `/v1/models`, fetched once and cached for the lifetime of the client
 4. Otherwise throw `NoModelAvailableException`
 
@@ -198,12 +198,12 @@ Document in the README that on Ollama, `/v1/models` lists every installed model,
 
 ### Structured output (`GetAsync<T>`)
 
-`GetAsync<T>` is a thin layer over Microsoft.Extensions.AI's `GetResponseAsync<T>`, which already generates the schema, sends it as `response_format: json_schema` and deserializes the reply ([0011](docs/decisions/0011-structured-output-builds-on-meai.md), based on [spike 0001](docs/spikes/0001-comparison-with-openai-sdk.md)). EmberLlm adds what that lacks: retries, a fallback for servers without schema support, and cleanup. This needs the `Microsoft.Extensions.AI` package as a runtime dependency (approved 2026-10-16).
+`GetAsync<T>` is a thin layer over Microsoft.Extensions.AI's `GetResponseAsync<T>`, which already generates the schema, sends it as `response_format: json_schema` and deserializes the reply ([0011](docs/decisions/0011-structured-output-builds-on-meai.md), based on [spike 0001](docs/spikes/0001-comparison-with-openai-sdk.md)). LocalSharp adds what that lacks: retries, a fallback for servers without schema support, and cleanup. This needs the `Microsoft.Extensions.AI` package as a runtime dependency (approved 2026-10-16).
 
 Details are in [0013](docs/decisions/0013-structured-output-modes-cleanup-and-retries.md).
 
 1. **Schema and deserialization.** Both come from `GetResponseAsync<T>`.
-2. **Mode.** `EmberLlmOptions.StructuredOutputMode` decides how the schema is sent:
+2. **Mode.** `LocalSharpOptions.StructuredOutputMode` decides how the schema is sent:
    - **`JsonSchema`** (the default) sends `response_format: json_schema`.
    - **`Prompt`** keeps Microsoft's schema message and removes the `response_format: json_object` it adds. Never send `json_object`: LM Studio rejects it with HTTP 400.
    - **Clients built from a `DiscoveredServer`** pick the mode from the capability table below: `Prompt` for `BackendType.Generic`, `JsonSchema` otherwise.
@@ -247,7 +247,7 @@ Unit tests run everywhere with no server; integration tests are opt-in and run a
 - **Unit tests (xUnit v3):** a fake `HttpMessageHandler` replays recorded responses. Cover request shaping, SSE stream parsing (including split chunks, `[DONE]`, and keep-alive comments), error mapping, timeouts vs cancellation, model selection, output cleanup (think blocks, code fences), and the structured-output retry loop.
 - **Design-rule tests:** every mapped option and message field, every rejection, pass-through of `AdditionalProperties`, preservation of unmodeled response fields, and the guard tests for `ChatMessage` and `ChatOptions`.
 - **Recorded fixtures:** capture real responses from each backend once and store them under `tests/fixtures/<backend>/`, where `<backend>` is `lmstudio`, `ollama`, `llamacpp`, `vllm` or `generic`. Backend quirks get tested from these.
-- **Integration tests:** skipped via `Assert.Skip` unless `EMBERLLM_TEST_URL` is set. Use the smallest model available so they run fast.
+- **Integration tests:** skipped via `Assert.Skip` unless `LOCALSHARP_TEST_URL` is set. Use the smallest model available so they run fast.
 - **CI:** GitHub Actions builds and runs unit tests on Linux and Windows on every push and PR. Integration tests stay local.
 
 ## Documentation and repo standards
@@ -277,16 +277,16 @@ Unit tests run everywhere with no server; integration tests are opt-in and run a
 Build in this order, one milestone per session or PR. Each milestone ends with passing tests and a commit. Milestones 1–3 are done; their descriptions record what was originally planned, and 3b reworks part of them.
 
 1. **Scaffold.** *(Done.)* Solution, projects, CI workflow (with coverage reporting), `.editorconfig`, `LICENSE`, stub README with badge placeholders, empty `ROADMAP.md` and `CHANGELOG.md`, `CONTRIBUTING.md`, bug-report issue template, `docs/decisions/` with the first decision note, and choose a final package name. Done when `dotnet build` and `dotnet test` pass in CI.
-2. **Chat (non-streaming).** *(Done.)* `EmberLlmClient`, options, `ChatRequest`, `CompleteAsync` and `ChatAsync` returning `ChatResponse` with usage, model selection, timeout handling, typed exceptions for HTTP and server errors. Done when unit tests cover success, 4xx, 5xx, timeouts, caller cancellation, and each model-selection branch.
+2. **Chat (non-streaming).** *(Done.)* `LocalSharpClient`, options, `ChatRequest`, `CompleteAsync` and `ChatAsync` returning `ChatResponse` with usage, model selection, timeout handling, typed exceptions for HTTP and server errors. Done when unit tests cover success, 4xx, 5xx, timeouts, caller cancellation, and each model-selection branch.
 3. **Streaming.** *(Done.)* SSE parser, `StreamAsync` (overloads for a prompt string and a `ChatRequest`) and `StreamUpdatesAsync`; request `stream_options.include_usage` so the final update carries usage. Verify each backend accepts `stream_options` when recording fixtures. Done when fixture tests cover split chunks, `[DONE]`, keep-alive comments, usage in the final update, and cancellation mid-stream.
 
-   **3b. IChatClient.** Make `EmberLlmClient` implement `IChatClient` ([0005](docs/decisions/0005-emberllmclient-implements-ichatclient.md)): `GetResponseAsync` and `GetStreamingResponseAsync` replace `ChatAsync` and `StreamUpdatesAsync`; remove `ChatRequest` and the `StreamAsync(ChatRequest)` overload; map `ChatOptions` per Design rules; implement `GetService` returning `ChatClientMetadata`. Also: update the `NoModelAvailableException` message to name `ChatOptions.ModelId`, add a test proving concurrent first calls make only one `/v1/models` request, and delete the leftover `AssemblyTests`. Done when every existing behavior test passes against the new methods, each mapped option and each rejection has a test, `AdditionalProperties` pass through, and the `ChatOptions` guard test passes.
+   **3b. IChatClient.** Make `LocalSharpClient` implement `IChatClient` ([0005](docs/decisions/0005-emberllmclient-implements-ichatclient.md)): `GetResponseAsync` and `GetStreamingResponseAsync` replace `ChatAsync` and `StreamUpdatesAsync`; remove `ChatRequest` and the `StreamAsync(ChatRequest)` overload; map `ChatOptions` per Design rules; implement `GetService` returning `ChatClientMetadata`. Also: update the `NoModelAvailableException` message to name `ChatOptions.ModelId`, add a test proving concurrent first calls make only one `/v1/models` request, and delete the leftover `AssemblyTests`. Done when every existing behavior test passes against the new methods, each mapped option and each rejection has a test, `AdditionalProperties` pass through, and the `ChatOptions` guard test passes.
 4. **Models.** `ListModelsAsync` with typed `ModelInfo`. Done when fixtures from at least LM Studio and Ollama parse. (LM Studio fixtures are recorded; the Ollama fixture test is in place but skipped until a real Ollama response is recorded.)
 5. **Discovery.** Parallel probing and fingerprinting per the table above. Done when fixture-based unit tests identify each backend, reject a non-LLM server on port 8000/8080, and return empty when nothing answers. Verifying against a running LM Studio is a manual check, not a CI test.
 
-   **5b. Comparison spike.** *(Done: [spike 0001](docs/spikes/0001-comparison-with-openai-sdk.md); milestone 6 narrowed by [0011](docs/decisions/0011-structured-output-builds-on-meai.md).)* A time-boxed experiment, not library code: compare EmberLlm with the obvious alternative, the official OpenAI SDK plus Microsoft's adapter pointed at a local server, using LM Studio and a small thinking model. Check at least: whether reasoning content survives, whether a model name is required, what errors look like when the server is down or the model is missing, and how Microsoft.Extensions.AI's own `GetResponseAsync<T>` copes with small-model output (code fences, `<think>` blocks, missing fields, retries). Throwaway code lives in `spikes/`; findings go in `docs/spikes/`. Done when the findings are written up, milestone 6's scope is confirmed or narrowed, and the README's "why this exists" section is revised so every claim is backed by the findings.
+   **5b. Comparison spike.** *(Done: [spike 0001](docs/spikes/0001-comparison-with-openai-sdk.md); milestone 6 narrowed by [0011](docs/decisions/0011-structured-output-builds-on-meai.md).)* A time-boxed experiment, not library code: compare LocalSharp with the obvious alternative, the official OpenAI SDK plus Microsoft's adapter pointed at a local server, using LM Studio and a small thinking model. Check at least: whether reasoning content survives, whether a model name is required, what errors look like when the server is down or the model is missing, and how Microsoft.Extensions.AI's own `GetResponseAsync<T>` copes with small-model output (code fences, `<think>` blocks, missing fields, retries). Throwaway code lives in `spikes/`; findings go in `docs/spikes/`. Done when the findings are written up, milestone 6's scope is confirmed or narrowed, and the README's "why this exists" section is revised so every claim is backed by the findings.
 6. **Structured output.** *(Done; details in [0013](docs/decisions/0013-structured-output-modes-cleanup-and-retries.md).)* `GetAsync<T>` over Microsoft.Extensions.AI's `GetResponseAsync<T>` ([0011](docs/decisions/0011-structured-output-builds-on-meai.md)): corrective retry loop, backend-aware choice between JSON schema mode and prompt fallback (never `json_object`), cleanup in the fallback path, strict deserialization. Done when tests prove a malformed first response triggers exactly one corrective retry, a `<think>`-prefixed or fenced response parses on the first attempt, and exhausting retries throws with all attempt errors.
-7. **Dependency injection.** `AddEmberLlm()`, registering `EmberLlmClient` and `IChatClient` through `IHttpClientFactory`. (`AsChatClient()` is no longer needed; see 3b.) Done when the sample app resolves `IChatClient` from DI and chats through it.
+7. **Dependency injection.** `AddLocalSharp()`, registering `LocalSharpClient` and `IChatClient` through `IHttpClientFactory`. (`AsChatClient()` is no longer needed; see 3b.) Done when the sample app resolves `IChatClient` from DI and chats through it.
 8. **Release prep.** *(Done: v0.1.0.)* README meeting every requirement in Documentation and repo standards (quick start, live badges, status note, decision-note links), samples, package metadata (description, tags, icon, repository URL), SourceLink, `CHANGELOG.md` entry for 0.1.0, decision notes complete, a tagged release workflow that publishes to NuGet and creates a GitHub release from the changelog. **Requires Michael:** create the NuGet API key or configure trusted publishing and add it to the GitHub repo secrets. Done when `v0.1.0` installs from NuGet and the GitHub release page is up.
 
 ## Phase 2: benchmark CLI
