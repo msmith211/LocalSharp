@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > [!NOTE]
-> **Status: v0.1.** Formerly **EmberLlm**, renamed to avoid a clash with an existing model of that name ([decision 0014](docs/decisions/0014-rename-to-localsharp.md)); v0.1.0 shipped as the `EmberLlm` package. Chat, streaming, model listing, server discovery, typed structured output and dependency injection all work, with unit tests in CI and integration tests against a real LM Studio server. Until 1.0, minor versions (0.2, 0.3) may include breaking changes.
+> **Status: v0.1.** Formerly **EmberLlm**, renamed to avoid a clash with an existing model of that name ([decision 0014](docs/decisions/0014-rename-to-localsharp.md)); v0.1.0 shipped as the `EmberLlm` package, and v0.1.1 is the first release as `LocalSharp`. Chat, streaming, model listing, server discovery, typed structured output and dependency injection all work, with unit tests in CI and integration tests against a real LM Studio server. Until 1.0, minor versions (0.2, 0.3) may include breaking changes.
 
 ## Contents
 
