@@ -73,16 +73,16 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore EmberLlm.slnx
+        run: dotnet restore LocalSharp.slnx
 
       - name: Build
-        run: dotnet build EmberLlm.slnx -c Release --no-restore -p:Version=${{ steps.version.outputs.version }}
+        run: dotnet build LocalSharp.slnx -c Release --no-restore -p:Version=${{ steps.version.outputs.version }}
 
       - name: Test
-        run: dotnet test --solution EmberLlm.slnx -c Release --no-build
+        run: dotnet test --solution LocalSharp.slnx -c Release --no-build
 
       - name: Pack
-        run: dotnet pack EmberLlm.slnx -c Release --no-build -p:Version=${{ steps.version.outputs.version }} -o packages
+        run: dotnet pack LocalSharp.slnx -c Release --no-build -p:Version=${{ steps.version.outputs.version }} -o packages
 
       - uses: actions/upload-artifact@v7
         with:
@@ -135,7 +135,7 @@ jobs:
           if [[ "$PRERELEASE" == "true" ]]; then flags+=(--prerelease); fi
           gh release create "$GITHUB_REF_NAME" packages/* \
             --repo "$GITHUB_REPOSITORY" \
-            --title "EmberLlm $VERSION" \
+            --title "LocalSharp $VERSION" \
             --notes-file release-notes.md \
             --verify-tag \
             "${flags[@]}"

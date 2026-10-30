@@ -1,11 +1,11 @@
-// Spike (milestone 5b): EmberLlm vs. the official OpenAI SDK + Microsoft.Extensions.AI.OpenAI adapter,
+// Spike (milestone 5b): LocalSharp vs. the official OpenAI SDK + Microsoft.Extensions.AI.OpenAI adapter,
 // against a real local server. Throwaway code: not part of the solution or CI. Findings: docs/spikes/.
 //
 // Run:  dotnet run spikes/comparison/Comparison.cs -- [baseUrl] [model] [structuredRuns] [sections, e.g. 1,2,7]
 #:package OpenAI@2.14.0
 #:package Microsoft.Extensions.AI.OpenAI@10.10.1
 #:package Microsoft.Extensions.AI@10.10.0
-#:project ../../src/EmberLlm/EmberLlm.csproj
+#:project ../../src/LocalSharp/LocalSharp.csproj
 #:property ManagePackageVersionsCentrally=false
 #:property TreatWarningsAsErrors=false
 #:property EnableNETAnalyzers=false
@@ -21,7 +21,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
-using EmberLlm;
+using LocalSharp;
 using Microsoft.Extensions.AI;
 using OpenAI;
 
@@ -41,9 +41,9 @@ IChatClient OpenAiClient(string modelId, string url = "", TimeSpan? networkTimeo
         NetworkTimeout = networkTimeout,
     }).AsIChatClient();
 
-using var ember = new EmberLlmClient(new HttpClient(new RecordingHandler(wire)), new EmberLlmOptions { BaseUrl = baseUrl });
+using var local = new LocalSharpClient(new HttpClient(new RecordingHandler(wire)), new LocalSharpOptions { BaseUrl = baseUrl });
 var openAi = OpenAiClient(model);
-var clients = new (string Name, IChatClient Client)[] { ("EmberLlm", ember), ("OpenAI SDK + adapter", openAi) };
+var clients = new (string Name, IChatClient Client)[] { ("LocalSharp", local), ("OpenAI SDK + adapter", openAi) };
 
 Console.WriteLine($"# Comparison spike\n\nServer: {baseUrl}, model: {model}, run {DateTimeOffset.Now:yyyy-MM-dd HH:mm}\n");
 
@@ -88,7 +88,7 @@ if (sections.Contains(2))
 if (sections.Contains(3))
 {
     Section("3. No model name given");
-    await Measure("EmberLlm", async () => $"CompleteAsync answered: [{(await ember.CompleteAsync("Reply with just: ok")).Trim()}]");
+    await Measure("LocalSharp", async () => $"CompleteAsync answered: [{(await local.CompleteAsync("Reply with just: ok")).Trim()}]");
     await Measure("OpenAI SDK + adapter", () =>
     {
         try { _ = OpenAiClient(""); return Task.FromResult("empty model accepted at construction"); }
@@ -99,10 +99,10 @@ if (sections.Contains(3))
 if (sections.Contains(4))
 {
     Section("4. Unknown model name (\"does-not-exist\")");
-    await Measure("EmberLlm", async () => Describe(await ember.GetResponseAsync([new(ChatRole.User, "Say hi.")], new ChatOptions { ModelId = "does-not-exist", MaxOutputTokens = TokenBudget })));
-    await Measure("EmberLlm, StrictModelMatching", async () =>
+    await Measure("LocalSharp", async () => Describe(await local.GetResponseAsync([new(ChatRole.User, "Say hi.")], new ChatOptions { ModelId = "does-not-exist", MaxOutputTokens = TokenBudget })));
+    await Measure("LocalSharp, StrictModelMatching", async () =>
     {
-        using var strict = new EmberLlmClient(new EmberLlmOptions { BaseUrl = baseUrl, StrictModelMatching = true });
+        using var strict = new LocalSharpClient(new LocalSharpOptions { BaseUrl = baseUrl, StrictModelMatching = true });
         return Describe(await strict.GetResponseAsync([new(ChatRole.User, "Say hi.")], new ChatOptions { ModelId = "does-not-exist", MaxOutputTokens = TokenBudget }));
     });
     await Measure("OpenAI SDK + adapter", async () => Describe(await OpenAiClient("does-not-exist").GetResponseAsync([new(ChatRole.User, "Say hi.")], new ChatOptions { MaxOutputTokens = TokenBudget })));
@@ -111,9 +111,9 @@ if (sections.Contains(4))
 if (sections.Contains(5))
 {
     Section("5. Server down (nothing listening on port 1299)");
-    await Measure("EmberLlm", async () =>
+    await Measure("LocalSharp", async () =>
     {
-        using var down = new EmberLlmClient(new EmberLlmOptions { BaseUrl = "http://127.0.0.1:1299", DefaultModel = model });
+        using var down = new LocalSharpClient(new LocalSharpOptions { BaseUrl = "http://127.0.0.1:1299", DefaultModel = model });
         return Describe(await down.GetResponseAsync([new(ChatRole.User, "Hi")]));
     });
     await Measure("OpenAI SDK + adapter", async () => Describe(await OpenAiClient(model, "http://127.0.0.1:1299").GetResponseAsync([new(ChatRole.User, "Hi")])));
@@ -124,7 +124,7 @@ if (sections.Contains(6))
     Section("6. Defaults");
     var defaults = new OpenAIClientOptions();
     Console.WriteLine($"- OpenAI SDK NetworkTimeout default: {defaults.NetworkTimeout?.ToString() ?? "null (library default)"}");
-    Console.WriteLine($"- EmberLlm RequestTimeout default: {EmberLlmOptions.DefaultRequestTimeout}");
+    Console.WriteLine($"- LocalSharp RequestTimeout default: {LocalSharpOptions.DefaultRequestTimeout}");
 }
 
 if (sections.Contains(7))
@@ -237,7 +237,7 @@ if (sections.Contains(9))
             return $"{ex.GetType().Name} after attempts at {string.Join(", ", accepted.Select(t => $"{t.TotalSeconds:F0} s"))}: {First(ex.Message)}";
         }
     });
-    Console.WriteLine($"- **EmberLlm**: RequestTimeout default {EmberLlmOptions.DefaultRequestTimeout}, no retries; times out once with EmberLlmTimeoutException (covered by unit tests).");
+    Console.WriteLine($"- **LocalSharp**: RequestTimeout default {LocalSharpOptions.DefaultRequestTimeout}, no retries; times out once with LocalSharpTimeoutException (covered by unit tests).");
 }
 
 static void Section(string title) => Console.WriteLine($"\n## {title}\n");

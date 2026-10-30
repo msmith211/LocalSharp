@@ -1,0 +1,94 @@
+using System.Text.Json;
+using LocalSharp.Tests.Fakes;
+using Microsoft.Extensions.AI;
+
+namespace LocalSharp.Tests.Chat;
+
+public class ChatResponseTests
+{
+    private static readonly ChatMessage[] Messages = [new(ChatRole.User, "Hi")];
+
+    private static readonly ChatOptions Options = new() { ModelId = "qwen3-14b" };
+
+    [Fact]
+    public async Task GetResponseAsync_MapsTextModelUsageAndFinishReason()
+    {
+        var handler = new FakeHttpHandler().RespondJson(SampleResponses.Completion("Hello there!"));
+        using var client = TestClients.Create(handler);
+
+        var response = await client.GetResponseAsync(Messages, Options, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Hello there!", response.Text);
+        Assert.Equal(ChatRole.Assistant, Assert.Single(response.Messages).Role);
+        Assert.Equal("chatcmpl-123", response.ResponseId);
+        Assert.Equal("qwen3-14b", response.ModelId);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1760000000), response.CreatedAt);
+        Assert.Equal(ChatFinishReason.Stop, response.FinishReason);
+        Assert.NotNull(response.Usage);
+        Assert.Equal(12, response.Usage.InputTokenCount);
+        Assert.Equal(3, response.Usage.OutputTokenCount);
+        Assert.Equal(15, response.Usage.TotalTokenCount);
+    }
+
+    [Theory]
+    [InlineData("length", "length")]
+    [InlineData("tool_calls", "tool_calls")]
+    [InlineData("content_filter", "content_filter")]
+    [InlineData("eos", "eos")]
+    public async Task GetResponseAsync_MapsFinishReason(string wireValue, string expected)
+    {
+        var handler = new FakeHttpHandler().RespondJson(SampleResponses.Completion(finishReason: wireValue));
+        using var client = TestClients.Create(handler);
+
+        var response = await client.GetResponseAsync(Messages, Options, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new ChatFinishReason(expected), response.FinishReason);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_ReasoningContent_IsSeparateFromText()
+    {
+        var handler = new FakeHttpHandler().RespondJson(SampleResponses.CompletionWithReasoning);
+        using var client = TestClients.Create(handler);
+
+        var response = await client.GetResponseAsync(Messages, Options, TestContext.Current.CancellationToken);
+
+        Assert.Equal("42", response.Text);
+        var reasoning = Assert.Single(response.Messages[0].Contents.OfType<TextReasoningContent>());
+        Assert.Equal("The user wants the answer.", reasoning.Text);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_UnknownFields_LandInAdditionalProperties()
+    {
+        var handler = new FakeHttpHandler().RespondJson(SampleResponses.CompletionWithTimings);
+        using var client = TestClients.Create(handler);
+
+        var response = await client.GetResponseAsync(Messages, Options, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(response.AdditionalProperties);
+        var timings = Assert.IsType<JsonElement>(response.AdditionalProperties["timings"]);
+        Assert.Equal(42.1, timings.GetProperty("predicted_per_second").GetDouble());
+        Assert.Null(response.Usage);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_NoChoices_ThrowsLocalSharpException()
+    {
+        var handler = new FakeHttpHandler().RespondJson(SampleResponses.CompletionWithNoChoices);
+        using var client = TestClients.Create(handler);
+
+        var ex = await Assert.ThrowsAsync<LocalSharpException>(() => client.GetResponseAsync(Messages, Options, TestContext.Current.CancellationToken));
+        Assert.Contains("no choices", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_InvalidJson_ThrowsLocalSharpException()
+    {
+        var handler = new FakeHttpHandler().Respond(System.Net.HttpStatusCode.OK, "not json");
+        using var client = TestClients.Create(handler);
+
+        var ex = await Assert.ThrowsAsync<LocalSharpException>(() => client.GetResponseAsync(Messages, Options, TestContext.Current.CancellationToken));
+        Assert.IsType<JsonException>(ex.InnerException, exactMatch: false);
+    }
+}

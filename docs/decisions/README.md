@@ -2,6 +2,8 @@
 
 Short records of significant design choices: what was decided, why, and what else was considered. Each note answers the question a reviewer would ask: "why did you do it this way?"
 
+Notes before 0014 use the project's former name, EmberLlm ([0014](0014-rename-to-localsharp.md)).
+
 | # | Decision | Status |
 | --- | --- | --- |
 | [0001](0001-reuse-microsoft-extensions-ai-types.md) | Reuse Microsoft.Extensions.AI types for messages and responses | Accepted; `ChatRequest` part superseded by 0005 |
@@ -17,6 +19,7 @@ Short records of significant design choices: what was decided, why, and what els
 | [0011](0011-structured-output-builds-on-meai.md) | Build GetAsync&lt;T&gt; on Microsoft.Extensions.AI's GetResponseAsync&lt;T&gt; | Accepted |
 | [0012](0012-register-a-singleton-client-with-addemberllm.md) | Register a singleton EmberLlmClient with AddEmberLlm, not a transient typed client | Accepted |
 | [0013](0013-structured-output-modes-cleanup-and-retries.md) | Choose the structured-output mode per client, clean only invalid replies, retry only parse failures | Accepted |
+| [0014](0014-rename-to-localsharp.md) | Rename EmberLlm to LocalSharp | Accepted |
 
 ## Writing a new note
 
